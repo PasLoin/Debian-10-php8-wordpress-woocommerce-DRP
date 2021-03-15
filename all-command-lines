@@ -1,0 +1,73 @@
+# This files is just the list of command i used to reinstall a neww debian 10 with wordpress.
+# It is based on note ; and is not scripted AND not re-tested. 
+# Use it at your own risks !  
+# There is redondant command : will be removed after tested with an another VPS réinstall. 
+
+
+sudo apt update
+sudo apt list --upgradable
+sudo apt upgrade
+sudo apt -y install lsb-release apt-transport-https ca-certificates
+sudo wget -O /etc/apt/trusted.gpg.d/php.gpg https://packages.sury.org/php/apt.gpg
+echo "deb https://packages.sury.org/php/ $(lsb_release -sc) main" | sudo tee /etc/apt/sources.list.d/php.list
+sudo apt update
+sudo apt -y install php8.0.0
+sudo apt install curl
+apt-get install php8.0-common php8.0-gd
+apt-get install php8.0-curl php8.0-dom php8.0-mbstring php8.0-imagick php8.0-zip
+systemctl restart apache2
+sudo apt-get install php-soap
+sudo apt-get install php8.0-{bcmath,bz2,intl,gd,mbstring,mysql,zip,php8.0-xml}
+
+# todo install this in one time ;=) 
+
+apt install default-mysql-server
+sudo mysql -u root -p
+USE mysql;
+UPDATE user SET plugin='mysql_native_password' WHERE User='root'; #### WARNING ##### THIS METHOD IS JUST A KICK IN THE ASS FOR QUICK AND LAZY SOLUTION ### TODO CHANGE THIS
+FLUSH PRIVILEGES;
+exit;
+sudo service mysql restart
+sudo mysql -u root
+CREATE DATABASE wordpress;
+GRANT ALL PRIVILEGES on wordpress.* TO 'wordpress_user'@'localhost' IDENTIFIED BY 'CHOOSE A FUCKING GOOD PASSWORD AND REMEMBER IT';
+FLUSH PRIVILEGES;
+
+EXIT;
+sudo apt install php-mysql
+cd /tmp/
+
+wget -c https://wordpress.org/latest.tar.gz
+tar -xvzf latest.tar.gz
+
+Sudo mv wordpress/ /var/www/html/
+Sudo chown -R www-data:www-data /var/www/html/wordpress/
+Sudo chmod 755 -R /var/www/html/wordpress/
+sudo rm latest.tar.gz
+#### Next, create a new Virtualhost for WordPress.
+nano /etc/apache2/sites-available/wordpress.conf
+<VirtualHost *:80>
+     ServerAdmin admin@your_domain.com
+      DocumentRoot /var/www/html/wordpress
+     ServerName yourvpsname.tld
+
+     <Directory /var/www/html/wordpress>
+          Options FollowSymlinks
+          AllowOverride All
+          Require all granted
+     </Directory>
+
+     ErrorLog ${APACHE_LOG_DIR}/yourvpsname.tld_error.log
+     CustomLog ${APACHE_LOG_DIR}/yourvpsname.tld_access.log combined
+
+</VirtualHost>
+ln -s /etc/apache2/sites-available/wordpress.conf /etc/apache2/sites-enabled/wordpress.conf
+sudo a2enmod rewrite
+sudo systemctl restart apache2
+
+# postfix for quick email test : InterneSite 
+Sudo apt upgrade
+sudo apt install mailutils
+sudo apt install postfix
+sudo nano /etc/postfix/main.cf
+Change the line that reads inet_interfaces = all to inet_interfaces = loopback-only
